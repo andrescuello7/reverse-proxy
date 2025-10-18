@@ -1,23 +1,29 @@
 use std::fs;
 use std::process::exit;
-use crate::config::ProxyEnvirements;
+use crate::config::ProxyConfig;
 
-pub fn to_toml() -> ProxyEnvirements {
-    let filename: &'static str = "proxy.toml";
-    let contents: String = match fs::read_to_string(filename) {
+// Read text of config un proxy.toml
+// If have configuration for servers
+pub fn read_config() -> String {
+    let filename: &'static str = "rpx.toml";
+    let content: String = match fs::read_to_string(filename) {
         Ok(c) => c,
         Err(_) => {
             eprintln!("Could not read file `{}`", filename);
             exit(1);
         }
     };
+    return content;
+}
 
-    let proxy_envirements: ProxyEnvirements = match toml::from_str(&contents) {
+// Parser and creation of models
+pub fn parser_data(content: String) -> ProxyConfig {
+    let proxy_config: ProxyConfig = match toml::from_str(&content) {
         Ok(d) => d,
         Err(_) => {
-            eprintln!("Unable to load data from `{}`", filename);
+            eprintln!("Unable to load data from");
             exit(1);
         }
     };
-    return proxy_envirements;
+    return proxy_config;
 }

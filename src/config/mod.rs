@@ -1,27 +1,35 @@
-use serde_derive::Deserialize;
+
 pub mod deser;
+use serde_derive::Deserialize;
+use tokio::net::TcpListener;
 
-// Top level struct to hold the TOML data.
-#[derive(Deserialize)]
-pub struct ProxyEnvirements {
-    pub(crate) server: Listen,
-    pub(crate) services: Services,
+#[derive(Debug, Deserialize)]
+pub struct ProxyConfig {
+    pub server: Vec<Server>,
+    pub forward: Vec<Forward>,
+    pub backends: Vec<Backends>,
 }
 
-// Config struct holds to data from the `[config]` section.
-#[derive(Deserialize)]
-pub struct Listen {
-    pub(crate) listen: Vec<Server>,
-}
-
-#[derive(Deserialize)]
-pub struct Services {
-    pub(crate) backends: Vec<Server>,
-}
-
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct Server {
-    /// This is of direction of server >> IP:PORT.
-    pub(crate) address: String,
-    pub(crate) weight: i16,
+    pub listen: Vec<String>,
+
+    #[serde(skip)] // No intentar deserializarlo
+    pub listener: Option<TcpListener>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Forward {
+    pub algorithm: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Backends {
+    pub backends: Vec<Backend>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Backend {
+    pub address: String,
+    pub weight: i16,
 }

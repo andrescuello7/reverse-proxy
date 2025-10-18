@@ -1,16 +1,14 @@
+mod task;
 mod config;
 mod service;
-mod task;
 
-use config::deser::to_toml;
 use hyper::Error;
 use task::master::Master;
-use crate::config::ProxyEnvirements;
+use config::deser::{read_config, parser_data};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    let config: ProxyEnvirements = to_toml();
+    let config = parser_data(read_config());
     Master::init(config)?.run().await?;
-
     Ok(())
 }
