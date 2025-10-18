@@ -1,0 +1,19 @@
+name = "rxh/main"
+
+[server]
+listen = [
+    { address = "192.168.100.7:9000", weight = 4}
+]
+
+[forward]
+algorithm = "WRR"
+
+[services]
+backends = [
+    { address = "127.0.0.1:3000", weight = 1 },
+]
+
+match = [
+    { uri = "/", forward = ["127.0.0.1:8080", "127.0.0.1:8000"] },
+    { uri = "/", serve = "/Users/andrescuello/Documents/GitHub/AndresCuello7/Systems/rxh" },
+]

@@ -1,0 +1,14 @@
+{
+  "name": "run-thread",
+  "version": "1.0.0",
+  "description": "Welcome to the **Operating Systems in C** course! This repository contains all the source code, exercises, diagrams, and documentation used throughout the course. It is designed to help you build a deep understanding of low-level programming, memory management, and core OS concepts — all through hands-on experience in the C programming language.",
+  "main": "server-node.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}
