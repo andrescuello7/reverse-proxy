@@ -2,6 +2,26 @@
 
 This is of project for system and implemented reverse proxy than nginx
 
+```mermaid
+sequenceDiagram
+    actor C as Server Protected
+    participant M as Master
+    participant W as Worker
+    
+rect rgba(100,100,100,.3)
+    Note over C,W: Create Conection   
+    M->>M: "Init Master Process on Thread."
+    M->>W: Create Process
+    W->>C: Create Socket to Client
+end
+
+rect rgba(100,100,100,.3)
+    Note over C,W: Request HTTP  
+    M->>W: Request
+    W->>C: Send request to socket
+    C->>M: Request
+end
+```
 
 ## Instalación en Linux
 
