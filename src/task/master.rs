@@ -1,7 +1,4 @@
 use std::process::exit;
-
-use tokio::net::TcpListener;
-
 use crate::config::{Backends, ProxyConfig, Server};
 
 // Func Master [run] principal init for the program
@@ -20,7 +17,6 @@ pub struct Master {
     // All the servers that the master has spawned.
     servers: Vec<Server>,
     backends: Vec<Backends>,
-    listener: Option<TcpListener>,
 }
 
 impl Master {
@@ -38,8 +34,7 @@ impl Master {
 
         Ok(Self {
             servers,
-            backends,
-            listener: None
+            backends
         })
     }
 
