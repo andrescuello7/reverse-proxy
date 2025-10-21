@@ -1,7 +1,7 @@
 
 pub mod deser;
 use serde_derive::Deserialize;
-use tokio::net::TcpListener;
+use tokio::net::{TcpListener, TcpStream};
 
 #[derive(Debug, Deserialize)]
 pub struct ProxyConfig {
@@ -13,8 +13,7 @@ pub struct ProxyConfig {
 #[derive(Debug, Deserialize)]
 pub struct Server {
     pub listen: Vec<String>,
-
-    #[serde(skip)] // No intentar deserializarlo
+    #[serde(skip)]
     pub listener: Option<TcpListener>,
 }
 

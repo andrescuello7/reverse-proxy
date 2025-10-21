@@ -1,18 +1,18 @@
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::{AsyncReadExt};
 use tokio::net::TcpStream;
 
 pub struct Proxy {}
 
 impl Proxy {
     pub async fn read_full_http_request(
-        socket: &mut TcpStream,
+        req_socket: &mut TcpStream,
     ) -> Result<String, Box<dyn std::error::Error>> {
         let mut buffer = Vec::new();
         let mut temp = [0; 1024];
 
         // Leemos hasta que encontremos el final de headers (\r\n\r\n)
         loop {
-            let n = socket.read(&mut temp).await?;
+            let n = req_socket.read(&mut temp).await?;
             if n == 0 {
                 break;
             }
@@ -38,7 +38,7 @@ impl Proxy {
         // Si hay body, lo leemos completo
         let mut total_body = Vec::new();
         while total_body.len() < content_length {
-            let n = socket.read(&mut temp).await?;
+            let n = req_socket.read(&mut temp).await?;
             if n == 0 {
                 break;
             }
@@ -52,18 +52,9 @@ impl Proxy {
         Ok(String::from_utf8_lossy(&full_request).to_string())
     }
 
-    /// 🔁 Reenvía la request completa al backend en localhost:3000
-    pub async fn proxy_to_backend(raw_request: String) -> Result<String, Box<dyn std::error::Error>> {
-        let mut backend = TcpStream::connect("localhost:3000").await?;
+    pub async fn spawn_backend() -> Result<TcpStream, Box<dyn std::error::Error>> {
+        let backend = TcpStream::connect("localhost:3000").await.inspect_err(|e| eprintln!("Error TCPStream Geneteation Worker {}", e));
         println!("[+] Connected to backend localhost:3000");
-
-        // Escribimos la request tal como llegó
-        backend.write_all(raw_request.as_bytes()).await?;
-
-        // Leemos toda la respuesta del backend
-        let mut response = Vec::new();
-        backend.read_to_end(&mut response).await?;
-
-        Ok(String::from_utf8_lossy(&response).to_string())
+        Ok(backend?)
     }
 }
