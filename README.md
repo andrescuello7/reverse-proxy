@@ -1,6 +1,8 @@
 # RPX - Reverse ProXy
 
 This is of project for system and implemented reverse proxy than nginx
+This is of idea create Master, it create Workers for params and its Workers 
+sharing request between Servers added
 
 ```mermaid
 sequenceDiagram
@@ -23,19 +25,7 @@ rect rgba(100,100,100,.3)
 end
 ```
 
-## Instalación en Linux
-
-```bash
-$ apt install rpx
-```
-
-## Instalación en MacOs
-
-```bash
-$ brew install rpx
-```
-
-Develop Install
+Development
 -----------
 - Cargo
 
@@ -47,7 +37,6 @@ $ binlocal -d ../rpx
 # run project
 $ rpx
 ```
-
 
 Commits
 -----------
