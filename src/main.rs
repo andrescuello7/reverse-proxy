@@ -1,6 +1,7 @@
 mod task;
 mod config;
 mod service;
+mod http;
 
 use hyper::Error;
 use task::master::Master;

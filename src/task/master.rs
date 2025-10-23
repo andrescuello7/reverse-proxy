@@ -57,10 +57,10 @@ impl Master {
             exit(1);
         };
 
-        if let Err(e) = self.server.spawn_backend().await {
-            eprintln!("failed spawning worker: {}", e);
-            exit(1);
-        };
+        // if let Err(e) = self.server.spawn_backend().await {
+        //     eprintln!("failed spawning worker: {}", e);
+        //     exit(1);
+        // };
 
         let workers_len = self.server.workers.len();
 

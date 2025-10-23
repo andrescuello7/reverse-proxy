@@ -3,12 +3,12 @@ use std::sync::Arc;
 use tokio::io::AsyncReadExt;
 use tokio::sync::Mutex;
 
+use crate::http::err_enum::Errs;
+use crate::service::proxy::Proxy;
 use tokio::{
     io::AsyncWriteExt,
     net::{TcpListener, TcpStream},
 };
-
-use crate::service::proxy::Proxy;
 
 //
 // New Connection for sockets for Protocol [`TCP/HTTP`]
@@ -57,14 +57,14 @@ impl Server {
         Ok(())
     }
 
-    pub async fn spawn_backend(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        self.workers[0].socket = Some(Arc::new(Mutex::new(
-            Proxy::spawn_backend()
-                .await
-                .expect("Failed creation socket worker"),
-        )));
-        Ok(())
-    }
+    // pub async fn spawn_backend(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    //     self.workers[0].socket = Some(Arc::new(Mutex::new(
+    //         Proxy::spawn_backend()
+    //             .await
+    //             .expect("Failed creation socket worker"),
+    //     )));
+    //     Ok(())
+    // }
 
     pub async fn socket_listener(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         let listener = match &mut self.listener {
@@ -75,14 +75,24 @@ impl Server {
             }
         };
 
-        // Clone the worker socket Arc for use in the spawn closure
-        let worker_socket = self.workers[0].socket.clone();
-
         loop {
             let (mut socket, addr) = listener.accept().await?;
 
+            let new_worker = match Proxy::spawn_backend().await {
+                Ok(w) => Arc::new(Mutex::new(w)),
+                Err(_) => {
+                    println!("Failed to write request");
+                    
+                    socket
+                        .write_all(Errs::Err502("").message().as_bytes())
+                        .await?;
+                    return Ok(());
+                }
+            };
+            self.workers[0].socket = Some(new_worker);
+
             // Clone the Arc for each spawned task
-            let worker_socket_clone = worker_socket.clone();
+            let worker_socket_clone = self.workers[0].socket.clone();
 
             tokio::spawn(async move {
                 let raw_request = Proxy::read_full_http_request(&mut socket)
@@ -93,22 +103,30 @@ impl Server {
 
                 if let Some(worker_socket) = worker_socket_clone {
                     let mut worker = worker_socket.lock().await;
-                    worker
-                        .write_all(raw_request.as_bytes())
-                        .await
-                        .expect("Failed to write request");
 
-                    let mut response = Vec::new();
-                    worker
-                        .read_to_end(&mut response)
-                        .await
-                        .expect("Failed to read request");
+                    match worker.write_all(raw_request.as_bytes()).await {
+                        Ok(_) => {
+                            let mut response = Vec::new();
+                            worker
+                                .read_to_end(&mut response)
+                                .await
+                                .expect("Failed to read request");
 
-                    let answer = String::from_utf8_lossy(&response).to_string();
-                    socket
-                        .write_all(answer.as_bytes())
-                        .await
-                        .expect("Failed to read request");
+                            let answer = String::from_utf8_lossy(&response).to_string();
+                            socket
+                                .write_all(answer.as_bytes())
+                                .await
+                                .expect("Failed to read request");
+                        }
+                        Err(_) => {
+                            println!("Failed to write request");
+
+                            socket
+                                .write_all(Errs::Err400("").message().as_bytes())
+                                .await
+                                .expect("Failed to read request")
+                        }
+                    }
                 } else {
                     eprintln!("No socket available for worker 0");
                 }
