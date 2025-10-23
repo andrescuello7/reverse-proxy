@@ -1,7 +1,7 @@
 
 pub mod deser;
 use serde_derive::Deserialize;
-use tokio::net::{TcpListener, TcpStream};
+use tokio::net::TcpListener;
 
 #[derive(Debug, Deserialize)]
 pub struct ProxyConfig {
