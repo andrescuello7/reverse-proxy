@@ -1,8 +1,16 @@
-# RPX - Reverse ProXy
+# RPX - Reverse Proxy
 
-This is of project for system and implemented reverse proxy than nginx
-This is of idea create Master, it create Workers for params and its Workers 
-sharing request between Servers added
+RPX is a lightweight reverse proxy system implemented in Rust, designed as an alternative to tools like NGINX.
+The main idea is to provide a Master–Worker architecture where the Master process dynamically creates and manages Workers.
+Each Worker handles incoming connections and distributes requests efficiently across multiple backend servers.
+
+
+https://github.com/user-attachments/assets/dab053bd-4e21-46e2-a780-bc84c84466f1
+
+
+### Architecture Overview
+
+This sample demonstrates how the system initializes and manages communication between the Master, Workers, and Protected Server.
 
 ```mermaid
 sequenceDiagram
@@ -53,3 +61,5 @@ For commits add structured for easy correction and detect issues
 
 **That was all, thank!** 
 - **Authors: Andres Cuello**
+
+Thank you for checking out RPX!
