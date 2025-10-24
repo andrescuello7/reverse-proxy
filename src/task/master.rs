@@ -57,15 +57,15 @@ impl Master {
             exit(1);
         };
 
-        // if let Err(e) = self.server.spawn_backend().await {
-        //     eprintln!("failed spawning worker: {}", e);
-        //     exit(1);
-        // };
-
         let workers_len = self.server.workers.len();
-
-        for _ in 0..workers_len {
-            if let Err(e) = self.server.socket_listener().await {
+        for index in 0..workers_len {
+            if let Err(e) = self.server.spawn_backend(index).await {
+                eprintln!("failed spawning worker: {}", e);
+                exit(1);
+            };
+        }
+        for index in 0..workers_len {
+            if let Err(e) = self.server.socket_listener(index).await {
                 eprintln!("failed listener child worker > socket: {}", e);
                 exit(1);
             };

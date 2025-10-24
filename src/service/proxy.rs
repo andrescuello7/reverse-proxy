@@ -1,6 +1,8 @@
 use tokio::io::{AsyncReadExt};
 use tokio::net::TcpStream;
 
+use crate::task::server::Worker;
+
 pub struct Proxy {}
 
 impl Proxy {
@@ -52,9 +54,16 @@ impl Proxy {
         Ok(String::from_utf8_lossy(&full_request).to_string())
     }
 
-    pub async fn spawn_backend() -> Result<TcpStream, Box<dyn std::error::Error>> {
-        let backend = TcpStream::connect("localhost:3000").await.inspect_err(|e| eprintln!("Error TCPStream Geneteation Worker {}", e));
-        println!("[+] Connected to backend localhost:3000");
-        Ok(backend?)
+    pub async fn spawn_backend(backend: &Worker) -> Result<TcpStream, Box<dyn std::error::Error>> {
+        match TcpStream::connect(backend.address.clone()).await {
+            Ok(w) => {
+                println!("[+] Connected to backend {}", backend.address);
+                return Ok(w);
+            },
+            Err(_) => {
+                println!("[x] Error in connect backend on principal worker [Master]");
+                return todo!()
+            },
+        }
     }
 }

@@ -1,7 +1,8 @@
-use std::process::exit;
 use std::sync::Arc;
+use std::{process::exit, time::Duration};
 use tokio::io::AsyncReadExt;
 use tokio::sync::Mutex;
+use tokio::time::timeout;
 
 use crate::http::err_enum::Errs;
 use crate::service::proxy::Proxy;
@@ -17,9 +18,9 @@ use tokio::{
 // With Struct for used from responses or answers
 // This part of comminication with services
 //
-//          +------------+
-//          |   PWorker  |
-//          +------------+
+//          +-----------+
+//          |  PWorker  |
+//          +-----------+
 //                |
 //                v
 //          +-----------+       +----------+       +----------+
@@ -47,26 +48,29 @@ impl Server {
         let listener = match TcpListener::bind(server).await {
             Ok(c) => c,
             Err(e) => {
-                eprintln!("failed creation of server or principal worker: {}", e);
+                eprintln!("[x] Failed creation of server or principal worker: {}", e);
                 exit(1)
             }
         };
         println!("[+] Listening on http://{}", server);
-
         self.listener = Some(listener);
         Ok(())
     }
 
-    // pub async fn spawn_backend(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-    //     self.workers[0].socket = Some(Arc::new(Mutex::new(
-    //         Proxy::spawn_backend()
-    //             .await
-    //             .expect("Failed creation socket worker"),
-    //     )));
-    //     Ok(())
-    // }
+    pub async fn spawn_backend(&mut self, index: usize) -> Result<(), Box<dyn std::error::Error>> {
+        let backend = &mut self.workers[index];
+        let create_socket: Arc<Mutex<TcpStream>> = match Proxy::spawn_backend(backend).await {
+            Ok(w) => Arc::new(Mutex::new(w)),
+            Err(_) => {
+                println!("Failed to write request");
+                return Ok(());
+            }
+        };
+        backend.socket = Some(create_socket);
+        Ok(())
+    }
 
-    pub async fn socket_listener(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn socket_listener(&mut self, index: usize) -> Result<(), Box<dyn std::error::Error>> {
         let listener = match &mut self.listener {
             Some(l) => l,
             None => {
@@ -76,44 +80,30 @@ impl Server {
         };
 
         loop {
-            let (mut socket, addr) = listener.accept().await?;
-
-            let new_worker = match Proxy::spawn_backend().await {
-                Ok(w) => Arc::new(Mutex::new(w)),
-                Err(_) => {
-                    println!("Failed to write request");
-                    
-                    socket
-                        .write_all(Errs::Err502("").message().as_bytes())
-                        .await?;
-                    return Ok(());
-                }
-            };
-            self.workers[0].socket = Some(new_worker);
-
-            // Clone the Arc for each spawned task
-            let worker_socket_clone = self.workers[0].socket.clone();
+            let (mut master, addr) = listener.accept().await?;
+            let backend = self.workers[index].socket.clone();
 
             tokio::spawn(async move {
-                let raw_request = Proxy::read_full_http_request(&mut socket)
+                let raw_request = Proxy::read_full_http_request(&mut master)
                     .await
                     .expect("Failed to read request");
 
-                println!("--- RAW REQUEST [{}] ---\n{:?}", addr, raw_request);
+                println!("-- REQUEST [{}]", addr);
 
-                if let Some(worker_socket) = worker_socket_clone {
-                    let mut worker = worker_socket.lock().await;
+                if let Some(mx_backend_socket) = backend {
+                    let mut be_socket = mx_backend_socket.lock().await;
 
-                    match worker.write_all(raw_request.as_bytes()).await {
+                    match be_socket.write_all(raw_request.as_bytes()).await {
                         Ok(_) => {
                             let mut response = Vec::new();
-                            worker
-                                .read_to_end(&mut response)
-                                .await
-                                .expect("Failed to read request");
+
+                            let _ =
+                                timeout(Duration::from_secs(1), be_socket.read_to_end(&mut response))
+                                    .await;
 
                             let answer = String::from_utf8_lossy(&response).to_string();
-                            socket
+
+                            master
                                 .write_all(answer.as_bytes())
                                 .await
                                 .expect("Failed to read request");
@@ -121,7 +111,7 @@ impl Server {
                         Err(_) => {
                             println!("Failed to write request");
 
-                            socket
+                            master
                                 .write_all(Errs::Err400("").message().as_bytes())
                                 .await
                                 .expect("Failed to read request")
